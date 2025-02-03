@@ -409,7 +409,9 @@ void gemm(
   internal::normalize_last_dims(transa, transb, m, n, k, &lda, &ldb, &ldc);
 
 #if defined(__aarch64__) && AT_MKLDNN_ENABLED()
-// TODO: ADI: add heuristic based on shape to dispatch to sbgemm_ vs MKLDNN
+// TODO: aditew01
+// add support for non-aarch64 CPU's
+// add heuristic based on shape to dispatch to sbgemm_ vs MKLDNN
    if (mkldnn_bf16f32_gemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)) {
      return;
    }
