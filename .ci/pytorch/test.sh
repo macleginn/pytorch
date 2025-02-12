@@ -396,56 +396,36 @@ test_inductor_aoti() {
 }
 
 test_inductor_cpp_wrapper_shard() {
-  if [[ -z "$NUM_TEST_SHARDS" ]]; then
-    echo "NUM_TEST_SHARDS must be defined to run a Python test shard"
-    exit 1
+  export TORCHINDUCTOR_CPP_WRAPPER=1
+  test_inductor_shard "$1"
+
+  # Run inductor benchmark tests with cpp wrapper.  Skip benchmark tests if it's
+  # in rerun-disabled-mode, or if we're not in the first shard.
+  if [[ "$PYTORCH_TEST_RERUN_DISABLED_TESTS" -eq "1" || "$1" -ne "1" ]]; then
+    echo "skip dynamo benchmark tests for rerun-disabled-test, or if not in the first shard"
+    return
   fi
 
-  export TORCHINDUCTOR_CPP_WRAPPER=1
   TEST_REPORTS_DIR=$(pwd)/test/test-reports
   mkdir -p "$TEST_REPORTS_DIR"
 
-  if [[ "$1" -eq "2" ]]; then
-    # For now, manually put the opinfo tests in shard 2, and all other tests in
-    # shard 1.  Run all CPU tests, as well as specific GPU tests triggering past
-    # bugs, for now.
-    python test/run_test.py \
-      --include inductor/test_torchinductor_opinfo \
-      -k 'linalg or to_sparse or TestInductorOpInfoCPU' \
-      --verbose
-    exit
-  fi
+  echo "run dynamo benchmark tests with cpp wrapper"
+  python benchmarks/dynamo/timm_models.py --device cuda --accuracy --amp \
+  --training --inductor --disable-cudagraphs --only vit_base_patch16_224 \
+  --output "$TEST_REPORTS_DIR/inductor_cpp_wrapper_training.csv"
+  python benchmarks/dynamo/check_accuracy.py \
+    --actual "$TEST_REPORTS_DIR/inductor_cpp_wrapper_training.csv" \
+    --expected "benchmarks/dynamo/ci_expected_accuracy/${MAYBE_ROCM}inductor_timm_training.csv"
 
-  # Run certain inductor unit tests with cpp wrapper. In the end state, we
-  # should be able to run all the inductor unit tests with cpp_wrapper.
-  python test/run_test.py \
-    --include inductor/test_torchinductor inductor/test_max_autotune inductor/test_cpu_repro \
-    --verbose
-  python test/run_test.py --inductor --include test_torch -k 'take' --verbose
-
-  # Run inductor benchmark tests with cpp wrapper.
-  # Skip benchmark tests if it's in rerun-disabled-mode.
-  if [[ "${PYTORCH_TEST_RERUN_DISABLED_TESTS}" == "1" ]]; then
-    echo "skip dynamo benchmark tests for rerun-disabled-test"
-  else
-    echo "run dynamo benchmark tests with cpp wrapper"
-    python benchmarks/dynamo/timm_models.py --device cuda --accuracy --amp \
-    --training --inductor --disable-cudagraphs --only vit_base_patch16_224 \
-    --output "$TEST_REPORTS_DIR/inductor_cpp_wrapper_training.csv"
-    python benchmarks/dynamo/check_accuracy.py \
-      --actual "$TEST_REPORTS_DIR/inductor_cpp_wrapper_training.csv" \
-      --expected "benchmarks/dynamo/ci_expected_accuracy/${MAYBE_ROCM}inductor_timm_training.csv"
-
-    python benchmarks/dynamo/torchbench.py --device cuda --accuracy \
-      --bfloat16 --inference --inductor --only hf_T5 --output "$TEST_REPORTS_DIR/inductor_cpp_wrapper_inference.csv"
-    python benchmarks/dynamo/torchbench.py --device cuda --accuracy \
-      --bfloat16 --inference --inductor --only llama --output "$TEST_REPORTS_DIR/inductor_cpp_wrapper_inference.csv"
-    python benchmarks/dynamo/torchbench.py --device cuda --accuracy \
-      --bfloat16 --inference --inductor --only moco --output "$TEST_REPORTS_DIR/inductor_cpp_wrapper_inference.csv"
-    python benchmarks/dynamo/check_accuracy.py \
-      --actual "$TEST_REPORTS_DIR/inductor_cpp_wrapper_inference.csv" \
-      --expected "benchmarks/dynamo/ci_expected_accuracy/${MAYBE_ROCM}inductor_torchbench_inference.csv"
-  fi
+  python benchmarks/dynamo/torchbench.py --device cuda --accuracy \
+    --bfloat16 --inference --inductor --only hf_T5 --output "$TEST_REPORTS_DIR/inductor_cpp_wrapper_inference.csv"
+  python benchmarks/dynamo/torchbench.py --device cuda --accuracy \
+    --bfloat16 --inference --inductor --only llama --output "$TEST_REPORTS_DIR/inductor_cpp_wrapper_inference.csv"
+  python benchmarks/dynamo/torchbench.py --device cuda --accuracy \
+    --bfloat16 --inference --inductor --only moco --output "$TEST_REPORTS_DIR/inductor_cpp_wrapper_inference.csv"
+  python benchmarks/dynamo/check_accuracy.py \
+    --actual "$TEST_REPORTS_DIR/inductor_cpp_wrapper_inference.csv" \
+    --expected "benchmarks/dynamo/ci_expected_accuracy/${MAYBE_ROCM}inductor_torchbench_inference.csv"
 }
 
 # "Global" flags for inductor benchmarking controlled by TEST_CONFIG
@@ -1542,7 +1522,10 @@ elif [[ "${TEST_CONFIG}" == *torchbench* ]]; then
 elif [[ "${TEST_CONFIG}" == *inductor_cpp_wrapper* ]]; then
   install_torchaudio cuda
   install_torchvision
-  checkout_install_torchbench hf_T5 llama moco
+  # We only run benchmarks on shard 1
+  if [[ "$SHARD_NUMBER" -eq "1" ]]; then
+    checkout_install_torchbench hf_T5 llama moco
+  fi
   PYTHONPATH=$(pwd)/torchbench test_inductor_cpp_wrapper_shard "$SHARD_NUMBER"
 elif [[ "${TEST_CONFIG}" == *inductor* ]]; then
   install_torchvision
