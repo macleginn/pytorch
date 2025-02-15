@@ -1031,10 +1031,12 @@ class TestCutlassBackend(TestCase):
             os.remove(cu_file.name)
             os.remove(exe_file.name)
 
-
+    t3
 if __name__ == "__main__":
     from torch._inductor.utils import is_big_gpu
 
     # Set env to make it work in CI.
     if HAS_CUDA and HAS_CPU and is_big_gpu():
         run_tests()
+
+    t2
