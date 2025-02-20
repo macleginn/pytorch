@@ -534,6 +534,9 @@ class AOTAutogradCacheEntry:
             CompileEventLogger.try_add_pt2_compile(
                 "backend_compile", dispatch_mode="inference"
             )
+        if not hasattr(compiled_fw_func, "_boxed_call"):
+            from .utils import make_boxed_func
+            compiled_fw_func = make_boxed_func(compiled_fw_func)
 
         # Wrap the forward function in post compile wrappers
         compiled_fw_func = AOTDispatchSubclassWrapper(
@@ -557,6 +560,7 @@ class AOTAutogradCacheEntry:
         ).post_compile(
             compiled_fw_func, aot_config, runtime_metadata=self.runtime_metadata
         )
+        compiled_fw_func._boxed_call = True  # TODO figure out where to put this.
         disable_amp = torch._C._is_any_autocast_enabled()
 
         if needs_autograd:
