@@ -235,6 +235,7 @@ Dispatch_fn_t = Callable[[argparse.Namespace, list[RunResult], str], None]
 
 def main() -> None:
     cmd_args = parse_cmd_args()
+    raise Exception("testing failure")
 
     dispatcher: dict[str, tuple[Dispatch_fn_t, list[str]]] = {
         "torchbench": (_run_torchbench_model, TORCHBENCH_MODELS),
