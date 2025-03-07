@@ -30,7 +30,6 @@ runs:
       env:
         NO_SUDO: ${{ inputs.no-sudo }}
       run: |
-<<<<<<< HEAD
         # Use all available CPUs for fetching
         cd "${GITHUB_WORKSPACE}"
         git config --global fetch.parallel 0
@@ -72,12 +71,6 @@ runs:
           retry sudo rm -rf "${GITHUB_WORKSPACE}"
         else
           retry rm -rf "${GITHUB_WORKSPACE}"
-=======
-        cd "${GITHUB_WORKSPACE}"
-        ls
-        if [[ -d .git ]]; then
-          git clean -ffdx
->>>>>>> 37d94c9290c (tc)
         fi
         git config --global fetch.parallel 0
         git config --global submodule.fetchJobs 0
