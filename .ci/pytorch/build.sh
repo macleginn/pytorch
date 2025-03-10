@@ -284,7 +284,7 @@ else
           "$BUILD_ENVIRONMENT" != *xla* ]]; then
       if [[ "$BUILD_ENVIRONMENT" != *py3.8* ]]; then
         # Install numpy-2.0.2 for builds which are backward compatible with 1.X
-        python -mpip install numpy==2.0.2
+        python -mpip install numpy==2.0.2 -v
       fi
 
       WERROR=1 python setup.py clean
