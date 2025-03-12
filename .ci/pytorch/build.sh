@@ -236,7 +236,6 @@ fi
 
 if [[ "$BUILD_ENVIRONMENT" == *sm89* ]]; then
   export USE_DISTRIBUTED=0
-  export USE_NCCL=0
 fi
 
 # Do not change workspace permissions for ROCm and s390x CI jobs
