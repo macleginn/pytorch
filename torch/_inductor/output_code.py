@@ -85,8 +85,8 @@ class OutputCode:
     def post_compile(
         self,
         example_inputs: Sequence[InputType],
-        cudagraphs: BoxedBool,
         constants: CompiledFxGraphConstants,
+        graph_kwargs: _CompileFxKwargs,
     ) -> None:
         raise NotImplementedError(type(self))
 
@@ -183,6 +183,7 @@ def cudagraph_post_compile(
     compiled_graph: CompiledFxGraph,
     cudagraphs: BoxedBool,
     constants: dict[str, torch.Tensor],
+    boxed_forward_device_index: Optional[BoxedDeviceIndex],
 ) -> None:
     """
     Checks for any reasons not to run cudagraphs and then
@@ -408,7 +409,6 @@ class CompiledFxGraph(OutputCode):
     partition_maps: Optional[list[GraphPartitionMap]]
     fx_kwargs: _CompileFxKwargs
     inputs_to_check: Sequence[int]
-    boxed_forward_device_index: Optional[BoxedDeviceIndex]
 
     _boxed_call: Optional[bool] = None
     _triton_bundle: Optional[list[TritonKernelArtifacts]] = None
@@ -427,7 +427,6 @@ class CompiledFxGraph(OutputCode):
         static_input_idxs: Sequence[int],
         fx_kwargs: _CompileFxKwargs,
         inputs_to_check: Sequence[int],
-        boxed_forward_device_index: Optional[BoxedDeviceIndex],
         recursively_apply_fns: Optional[Callable[..., Any]] = None,
     ) -> None:
         self.current_callable = current_callable
@@ -472,7 +471,6 @@ class CompiledFxGraph(OutputCode):
         self.partition_maps = graph.partition_maps
         self.fx_kwargs = {}
         self.inputs_to_check = ()
-        self.boxed_forward_device_index = None
 
         cudagraph_info = None
         if cudagraphs:
@@ -541,8 +539,6 @@ class CompiledFxGraph(OutputCode):
         self.cudagraph_info = cudagraph_info
         self.inputs_to_check = inputs_to_check
         self.fx_kwargs = fx_kwargs
-        # TODO: should this be part of fx_kwargs
-        self.boxed_forward_device_index = boxed_forward_device_index
 
         # aot autograd needs to know to pass in inputs as a list
         self._boxed_call = True
@@ -558,8 +554,8 @@ class CompiledFxGraph(OutputCode):
     def post_compile(
         self,
         example_inputs: Sequence[InputType],
-        cudagraphs: BoxedBool,
         constants: CompiledFxGraphConstants,
+        graph_kwargs: _CompileFxKwargs,
     ) -> None:
         """
         Run a set of post processing steps after loading from the cache. These involve:
@@ -571,7 +567,10 @@ class CompiledFxGraph(OutputCode):
         The results of this function are *not* saved in the cache itself.
         """
         set_tracing_context_output_strides(example_inputs, self)
-
+        assert graph_kwargs["cudagraphs"] is not None
+        assert graph_kwargs["is_backward"] is not None
+        is_backward = graph_kwargs["is_backward"]
+        cudagraphs: BoxedBool = graph_kwargs["cudagraphs"]
         if cudagraphs:
             # It's possible that cudagraphs is enabled, but was disabled
             # during a previous compilation we're loading from the cache.
@@ -585,6 +584,7 @@ class CompiledFxGraph(OutputCode):
                     counters["inductor"]["cudagraph_skips"] += 1
                 BoxedBool.disable(cudagraphs)
             else:
+<<<<<<< HEAD
                 if config.graph_partition:
                     # with graph_partition=True, we skip some cudagraph checks if it's supported
                     # with partition. So we have to use cudagraph_partition_post_compile.
@@ -602,6 +602,26 @@ class CompiledFxGraph(OutputCode):
                         constants.unwrap(self),
                     )
 
+=======
+                if is_backward:
+                    assert "boxed_forward_device_index" in graph_kwargs
+                    boxed_forward_device_index = graph_kwargs[
+                        "boxed_forward_device_index"
+                    ]
+                else:
+                    # On the forward we don't know whether or not
+                    # boxed_foward_device_index is set yet
+                    boxed_forward_device_index = graph_kwargs.get(
+                        "boxed_forward_device_index", None
+                    )
+                cudagraph_post_compile(
+                    example_inputs,
+                    self,
+                    cudagraphs,
+                    constants.unwrap(self),
+                    boxed_forward_device_index,
+                )
+>>>>>>> 5302cb5f72c (Use correct boxed_forward_device_index when running CompileFXGraph post compile)
         inputs_to_check = self.inputs_to_check
         # cudagraphs could have been disabled from the earlier conditions
         # so we still need to realign inputs if that happens
@@ -687,8 +707,8 @@ class CompiledAOTI(OutputCode):
     def post_compile(
         self,
         example_inputs: Sequence[InputType],
-        cudagraphs: BoxedBool,
         constants: CompiledFxGraphConstants,
+        graph_kwargs: _CompileFxKwargs,
     ) -> None:
         pass
 
@@ -706,8 +726,8 @@ class MockFXGraphCacheOutput(OutputCode):
     def post_compile(
         self,
         example_inputs: Sequence[InputType],
-        cudagraphs: BoxedBool,
         constants: CompiledFxGraphConstants,
+        graph_kwargs: _CompileFxKwargs,
     ) -> None:
         pass
 
