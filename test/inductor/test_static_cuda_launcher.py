@@ -65,7 +65,7 @@ class TestStaticCudaLauncher(TestCase):
         device_interface = get_interface_for_device("cuda")
         stream = device_interface.get_raw_stream(device_interface.current_device())
 
-        launcher.run((1,), stream, new_arg0, arg1)
+        launcher.run(1, 1, 1, stream, new_arg0, arg1)
         self.assertEqual(new_arg0, arg0)
 
     # I wish I could macro all int types this into a single unit test on a loop, but
@@ -91,7 +91,7 @@ class TestStaticCudaLauncher(TestCase):
         new_arg0 = torch.zeros(1, dtype=torch.uint64, device="cuda")
         device_interface = get_interface_for_device("cuda")
         stream = device_interface.get_raw_stream(device_interface.current_device())
-        launcher.run((1,), stream, new_arg0, 50, 50, 50, 50)
+        launcher.run(1, 1, 1, stream, new_arg0, 50, 50, 50, 50)
         self.assertEqual(new_arg0, arg0)
 
     def test_signed_integers(self):
@@ -112,7 +112,7 @@ class TestStaticCudaLauncher(TestCase):
         new_arg0 = torch.zeros(1, dtype=torch.int64, device="cuda")
         device_interface = get_interface_for_device("cuda")
         stream = device_interface.get_raw_stream(device_interface.current_device())
-        launcher.run((1,), stream, new_arg0, 50, 50, 50, 50)
+        launcher.run(1, 1, 1, stream, new_arg0, 50, 50, 50, 50)
         self.assertEqual(new_arg0, arg0)
 
     # TODO: floats don't work properly, triton seems to think they're all tl.float32
@@ -136,7 +136,7 @@ class TestStaticCudaLauncher(TestCase):
         new_arg0 = torch.zeros(1, dtype=torch.float64, device="cuda")
         device_interface = get_interface_for_device("cuda")
         stream = device_interface.get_raw_stream(device_interface.current_device())
-        launcher.run((1,), stream, new_arg0, 1.0, 1.0, 1.0)
+        launcher.run(1, 1, 1, stream, new_arg0, 1.0, 1.0, 1.0)
         self.assertEqual(new_arg0, arg0)
 
     def test_basic_1arg(self):
@@ -153,7 +153,9 @@ class TestStaticCudaLauncher(TestCase):
         stream = device_interface.get_raw_stream(device_interface.current_device())
 
         launcher.run(
-            (1,),
+            1,
+            1,
+            1,
             stream,
             new_arg0,
         )
@@ -181,7 +183,9 @@ class TestStaticCudaLauncher(TestCase):
         device_interface = get_interface_for_device("cuda")
         stream = device_interface.get_raw_stream(device_interface.current_device())
         launcher.run(
-            (1,),
+            1,
+            1,
+            1,
             stream,
             new_arg0,
         )
@@ -238,7 +242,8 @@ class TestStaticCudaLauncher(TestCase):
 
         device_interface = get_interface_for_device("cuda")
         stream = device_interface.get_raw_stream(device_interface.current_device())
-        launcher.run((1,), stream, arg0, arg2, 1, 128)
+        # Don't pass in xnumel, as it is a constant
+        launcher.run(1, 1, 1, stream, arg0, arg2, 128)
         self.assertEqual(arg1, arg2)
 
     def test_too_many_args(self):
@@ -367,7 +372,7 @@ class TestStaticCudaLauncher(TestCase):
         device_interface = get_interface_for_device("cuda")
         stream = device_interface.get_raw_stream(device_interface.current_device())
 
-        launcher.run((1, 1, 1), stream, arg1, arg2, buf1, arg0, xnumel)
+        launcher.run(1, 1, 1, stream, arg1, arg2, buf1, arg0, xnumel)
         self.assertEqual(buf0, buf1)
 
 
