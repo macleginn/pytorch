@@ -475,7 +475,30 @@ class GraphModule(torch.nn.Module):
 
         opt_fn = torch.compile(fn, backend="inductor", fullgraph=True)
         with self.assertRaisesRegex(
-            torch._dynamo.exc.Unsupported, "NYI: invoke_subgraph with aliasing"
+            torch._dynamo.exc.Unsupported,
+            "Encountered input mutation during higher order op tracing",
+        ):
+            opt_fn(x, y)
+
+    # @unittest.skip("speculate_subgraph fails with inference_mode")
+    def test_input_mutation_inference_mode(self):
+        @mark_compile_region
+        def gn(x, y):
+            x.add_(1)
+            return torch.mul(x, y)
+
+        def fn(x, y):
+            z = torch.cos(x)
+            with torch.inference_mode():
+                return gn(torch.cos(z), y)
+
+        opt_fn = torch.compile(fn, backend="inductor", fullgraph=True)
+        x = torch.randn(8, requires_grad=False)
+        y = torch.randn(8, requires_grad=False)
+
+        with self.assertRaisesRegex(
+            torch._dynamo.exc.Unsupported,
+            "Encountered input mutation during higher order op tracing",
         ):
             opt_fn(x, y)
 
@@ -518,7 +541,7 @@ class GraphModule(torch.nn.Module):
         ):
             opt_fn(x)
 
-    def test_input_aliasing(self):
+    def test_input_output_aliasing(self):
         @mark_compile_region
         def gn(x, y):
             return (x, torch.mul(x, y))
@@ -532,7 +555,73 @@ class GraphModule(torch.nn.Module):
 
         opt_fn = torch.compile(fn, backend="inductor", fullgraph=True)
         with self.assertRaisesRegex(
-            torch._dynamo.exc.Unsupported, "NYI: invoke_subgraph with aliasing"
+            torch._dynamo.exc.Unsupported,
+            "Encountered aliasing during higher order op tracing",
+        ):
+            opt_fn(x, y)
+
+    def test_input_input_aliasing(self):
+        @mark_compile_region
+        def gn(x, y):
+            return torch.mul(x, y)
+
+        def fn(x):
+            return gn(x, x.view(1, 8))
+
+        x = torch.randn(8, requires_grad=False)
+
+        opt_fn = torch.compile(fn, backend="inductor", fullgraph=True)
+        with self.assertRaisesRegex(
+            torch._dynamo.exc.Unsupported,
+            "Encountered aliasing during higher order op tracing",
+        ):
+            opt_fn(x)
+
+    def test_output_output_aliasing(self):
+        @mark_compile_region
+        def gn(x):
+            z = torch.cos(x)
+            return z, z.view(1, 8)
+
+        def fn(x):
+            return gn(x)
+
+        x = torch.randn(8, requires_grad=False)
+
+        opt_fn = torch.compile(fn, backend="inductor", fullgraph=True)
+        with self.assertRaisesRegex(
+            torch._dynamo.exc.Unsupported,
+            "Encountered aliasing during higher order op tracing",
+        ):
+            opt_fn(x)
+
+    def test_mod_attr_aliasing(self):
+        class MutateParam(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.a = torch.ones(8)
+
+            def forward(self, x):
+                self.a.add_(1)
+                return torch.mul(x, self.a)
+
+        @mark_compile_region
+        def gn(x):
+            return mod(x)
+
+        def fn(x, y):
+            return gn(x) * y
+
+        mod = MutateParam()
+        x = torch.randn(8, requires_grad=False)
+        y = torch.randn(8, requires_grad=False)
+
+        fn(x, y)
+
+        opt_fn = torch.compile(fn, backend="inductor", fullgraph=True)
+        with self.assertRaisesRegex(
+            torch._dynamo.exc.Unsupported,
+            "Encountered input mutation during higher order op tracing",
         ):
             opt_fn(x, y)
 
