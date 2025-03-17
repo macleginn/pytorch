@@ -363,7 +363,6 @@ case "$image" in
     DB=yes
     VISION=yes
     KATEX=yes
-    TRITON=yes
     DOCS=yes
     UNINSTALL_DILL=yes
     ;;
