@@ -72,8 +72,6 @@ runs:
         else
           retry rm -rf "${GITHUB_WORKSPACE}"
         fi
-        git config --global fetch.parallel 0
-        git config --global submodule.fetchJobs 0
 
     - name: Checkout PyTorch (try again)
       uses: actions/checkout@v4
@@ -83,11 +81,3 @@ runs:
         fetch-depth: ${{ inputs.fetch-depth }}
         submodules: ${{ inputs.submodules }}
         show-progress: false
-
-    - name: check git config
-      shell: bash
-      env:
-        NO_SUDO: ${{ inputs.no-sudo }}
-      run: |
-        cd "${GITHUB_WORKSPACE}"
-        git config --list

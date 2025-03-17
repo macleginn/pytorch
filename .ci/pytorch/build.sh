@@ -15,8 +15,6 @@ if [[ "$BUILD_ENVIRONMENT" == *-mobile-*build* ]]; then
   exec "$(dirname "${BASH_SOURCE[0]}")/build-mobile.sh" "$@"
 fi
 
-pip install ninja==1.11.1
-
 echo "Python version:"
 python --version
 
@@ -284,7 +282,7 @@ else
           "$BUILD_ENVIRONMENT" != *xla* ]]; then
       if [[ "$BUILD_ENVIRONMENT" != *py3.8* ]]; then
         # Install numpy-2.0.2 for builds which are backward compatible with 1.X
-        python -mpip install numpy==2.0.2 -v
+        python -mpip install numpy==2.0.2
       fi
 
       WERROR=1 python setup.py clean
