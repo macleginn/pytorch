@@ -246,10 +246,6 @@ case "$image" in
     PROTOBUF=yes
     DB=yes
     VISION=yes
-    VULKAN_SDK_VERSION=1.2.162.1
-    SWIFTSHADER=yes
-    CONDA_CMAKE=yes
-    TRITON=yes
     ;;
   pytorch-linux-focal-py3.11-clang10)
     ANACONDA_PYTHON_VERSION=3.11
@@ -257,10 +253,6 @@ case "$image" in
     PROTOBUF=yes
     DB=yes
     VISION=yes
-    VULKAN_SDK_VERSION=1.2.162.1
-    SWIFTSHADER=yes
-    CONDA_CMAKE=yes
-    TRITON=yes
     ;;
   pytorch-linux-focal-py3.9-gcc9)
     ANACONDA_PYTHON_VERSION=3.9
@@ -268,8 +260,6 @@ case "$image" in
     PROTOBUF=yes
     DB=yes
     VISION=yes
-    CONDA_CMAKE=yes
-    TRITON=yes
     ;;
   pytorch-linux-focal-rocm-n-1-py3)
     ANACONDA_PYTHON_VERSION=3.10
