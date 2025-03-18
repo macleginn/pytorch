@@ -1655,7 +1655,10 @@ class BuiltinVariable(VariableTracker):
         )
 
     def call_len(self, tx: "InstructionTranslator", *args, **kwargs):
-        return args[0].call_method(tx, "__len__", args[1:], kwargs)
+        try:
+            return args[0].call_method(tx, "__len__", args[1:], kwargs)
+        except AttributeError as e:
+            raise_observed_exception(type(e), tx, args=list(e.args))
 
     def call_getitem(self, tx: "InstructionTranslator", *args, **kwargs):
         return args[0].call_method(tx, "__getitem__", args[1:], kwargs)
@@ -1869,6 +1872,38 @@ class BuiltinVariable(VariableTracker):
                 variables.UserDefinedObjectVariable,
             ),
         ):
+            if (
+                isinstance(obj, variables.UserDefinedObjectVariable)
+                and (mod := inspect.getmodule(obj.value))
+                and (mod_name := mod.__name__)
+                and mod_name in ("_pytest.unittest", "unittest")
+            ):
+                if not config.enable_trace_unittest:
+                    unimplemented_v2(
+                        gb_type="Attempted to call function marked as skipped",
+                        context=f"function: unittest.TestCase.{name}",
+                        explanation=f"Dynamo cannot trace function unittest.TestCase.{name} which is marked as skipped by default",
+                        hints=["Set `torch._dynamo.config.enable_trace_unittest=True`"],
+                    )
+
+                if name in (
+                    "assertRaisesRegex",
+                    "assertNotWarns",
+                    "assertWarnsRegex",
+                    "assertDictEqual",
+                    "assertSequenceEqual",
+                    "assertWarns",
+                ):
+                    unimplemented_v2(
+                        gb_type="Failed to trace builtin operator",
+                        context=f"function: unittest.TestCase.{name}",
+                        explanation=f"Dynamo does not know how to trace builtin operator `{name}` ",
+                        hints=[
+                            f"Avoid calling builtin `{name}`. "
+                            "Please report an issue to PyTorch.",
+                        ],
+                    )
+
             try:
                 return obj.var_getattr(tx, name)
             except NotImplementedError:

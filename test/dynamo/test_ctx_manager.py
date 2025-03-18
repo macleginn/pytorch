@@ -1745,10 +1745,13 @@ class GraphModule(torch.nn.Module):
 class ContextlibContextManagerTests(torch._dynamo.test_case.TestCase):
     def setUp(self):
         self._prev = torch._dynamo.config.enable_trace_contextlib
+        self._u_prev = torch._dynamo.config.enable_trace_unittest
         torch._dynamo.config.enable_trace_contextlib = True
+        torch._dynamo.config.enable_trace_unittest = True
 
     def tearDown(self):
         torch._dynamo.config.enable_trace_contextlib = self._prev
+        torch._dynamo.config.enable_trace_unittest = self._u_prev
 
     def test_ctx_basic0(self):
         @contextlib.contextmanager
@@ -2695,6 +2698,12 @@ class GraphModule(torch.nn.Module):
 class CPythonContextManagerTestCase(torch._dynamo.test_case.TestCase):
     # Tests taken from CPython source code in cpython/Lib/test/test_contextlib.py
     # https://github.com/python/cpython/blob/d48cc82ed25e26b02eb97c6263d95dcaa1e9111b/Lib/test/test_contextlib.py#L70
+    def setUp(self):
+        self._prev = torch._dynamo.config.enable_trace_unittest
+        torch._dynamo.config.enable_trace_unittest = True
+
+    def tearDown(self):
+        torch._dynamo.config.enable_trace_unittest = self._prev
 
     def test_contextmanager_plain(self):
         state = []
@@ -2722,7 +2731,6 @@ class CPythonContextManagerTestCase(torch._dynamo.test_case.TestCase):
         self.assertEqual(state, [1, 42, 999])
         self.assertEqual(y, t.sum() + 42)
 
-    @unittest.expectedFailure
     def test_contextmanager_finally(self):
         state = []
 
@@ -2832,7 +2840,6 @@ class CPythonContextManagerTestCase(torch._dynamo.test_case.TestCase):
                 self.assertEqual(frames[0].name, "test_contextmanager_traceback")
                 self.assertEqual(frames[0].line, "raise stop_exc")
 
-    @unittest.expectedFailure
     def test_contextmanager_no_reraise(self):
         @contextmanager
         def whee():
@@ -2848,7 +2855,6 @@ class CPythonContextManagerTestCase(torch._dynamo.test_case.TestCase):
 
         fn(torch.randn(2, 3))
 
-    @unittest.expectedFailure
     def test_contextmanager_trap_yield_after_throw(self):
         @contextmanager
         def whoo():
@@ -2867,7 +2873,6 @@ class CPythonContextManagerTestCase(torch._dynamo.test_case.TestCase):
 
         fn(torch.randn(2, 3))
 
-    @unittest.expectedFailure
     def test_contextmanager_trap_no_yield(self):
         @contextmanager
         def whoo():
@@ -2883,7 +2888,6 @@ class CPythonContextManagerTestCase(torch._dynamo.test_case.TestCase):
 
         fn(torch.randn(2, 3))
 
-    @unittest.expectedFailure
     def test_contextmanager_trap_second_yield(self):
         @contextmanager
         def whoo():

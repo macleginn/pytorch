@@ -28,6 +28,14 @@ class SysTests(torch._dynamo.test_case.TestCase):
 class CPythonActiveExceptionTests(torch._dynamo.test_case.TestCase):
     # Tests taken from CPython source code in cpython/Lib/test/test_sys.py
     # https://github.com/python/cpython/blob/v3.13.1/Lib/test/test_sys.py
+
+    def setUp(self):
+        self._prev = torch._dynamo.config.enable_trace_unittest
+        torch._dynamo.config.enable_trace_unittest = True
+
+    def tearDown(self):
+        torch._dynamo.config.enable_trace_unittest = self._prev
+
     @make_dynamo_test
     def test_exc_info_no_exception(self):
         self.assertEqual(sys.exc_info(), (None, None, None))
@@ -37,7 +45,6 @@ class CPythonActiveExceptionTests(torch._dynamo.test_case.TestCase):
     def test_sys_exception_no_exception(self):
         self.assertEqual(sys.exception(), None)
 
-    @unittest.expectedFailure
     @make_dynamo_test
     def test_exc_info_with_exception_instance(self):
         def f():
@@ -54,7 +61,6 @@ class CPythonActiveExceptionTests(torch._dynamo.test_case.TestCase):
         self.assertIs(exc_info[1], e)
         self.assertIs(exc_info[2], e.__traceback__)
 
-    @unittest.expectedFailure
     @make_dynamo_test
     def test_exc_info_with_exception_type(self):
         def f():
@@ -71,7 +77,6 @@ class CPythonActiveExceptionTests(torch._dynamo.test_case.TestCase):
         self.assertIs(exc_info[1], e)
         self.assertIs(exc_info[2], e.__traceback__)
 
-    @unittest.expectedFailure
     @unittest.skipIf(sys.version_info < (3, 11), "Python 3.11+")
     @make_dynamo_test
     def test_sys_exception_with_exception_instance(self):
@@ -87,7 +92,6 @@ class CPythonActiveExceptionTests(torch._dynamo.test_case.TestCase):
         self.assertIsInstance(e, ValueError)
         self.assertIs(exc, e)
 
-    @unittest.expectedFailure
     @unittest.skipIf(sys.version_info < (3, 11), "Python 3.11+")
     @make_dynamo_test
     def test_sys_exception_with_exception_type(self):
